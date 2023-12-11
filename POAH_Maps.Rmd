@@ -1,0 +1,164 @@
+---
+title: "POAH_Project"
+output: html_document
+date: "2023-12-08"
+---
+
+```{r setup, include=FALSE}
+
+library(readxl)
+FQHC <- read_excel("~/POAH Healthcare Site Project/POAHProj_v2.xls", 
+    sheet = "FQHC")
+
+State_Line <- read_excel("~/POAH Healthcare Site Project/POAHProjData.xls", 
+    sheet = "States")
+
+POAH_State <- read_excel("~/POAH Healthcare Site Project/POAHProj_v2.xls", 
+    sheet = "POAH_Prop_States")
+
+POAH_Props <- read_excel("~/POAH Healthcare Site Project/POAHProj_v2.xls", 
+    sheet = "POAHProperty")
+
+CCBHC <- read_excel("~/POAH Healthcare Site Project/POAHProj_v2.xls", 
+    sheet = "CCBHC")
+
+```
+
+## Downloading Libraries
+```{r, warning=FALSE, results=FALSE, message=FALSE}
+library(tidyverse)
+library(sf)
+library(leaflet)
+library(htmltools)
+library(htmlwidgets)
+library(stringr)
+library(USA.state.boundaries)
+```
+
+```{r}
+
+# POAH Site Pop UP v2
+
+
+POAH_Props$describe4 <- paste("<b>",  
+         "<p style='color:#587E96;'>", "<p style='font-size:16px;color:#587E96;'>", POAH_Props$Property_Name, "</b>", 
+        "<b>", "<p style='color:Black;'>", " Address:", "</b>", POAH_Props$`Combined Address`,
+        "<b>", "<p style='color:Black;'>", "Total Units:", "</b>", POAH_Props$Total_Units, 
+        "<b>", "<p style='color:Black;'>", "Closest FQHC:","</b>", POAH_Props$F_Satellite_Name,
+        "<b>", "<p style='color:Black;'>", "Closest CCBHC:","</b>", POAH_Props$CCBHC_Name) %>%
+  lapply(htmltools::HTML)
+```
+
+```{r}
+
+# POAH Site Pop UP
+
+POAH_Props$describe <- paste("<b>",  
+         "<p style='color:#587E96;'>", "<p style='font-size:16px;color:#587E96;'>", POAH_Props$Property_Name, "</b>", 
+        "<b>", "<p style='color:Black;'>", " Address:", "</b>", POAH_Props$`Combined Address`,
+        "<b>", "<p style='color:Black;'>", "Total Units:", "</b>", POAH_Props$Total_Units, 
+        "<b>", "<p style='color:Black;'>", "Closest FQHC:","</b>", POAH_Props$F_Satellite_Name,
+        "<b>", "<p style='color:Black;'>", "Closest CCBHC:","</b>", POAH_Props$CCBHC_Name) %>%
+  lapply(htmltools::HTML)
+```
+
+```{r}
+
+# CCBHC Site Pop UP
+
+CCBHC$describe2 <- paste("<b>",  
+         "<p style='color:Black;'>", CCBHC$CCBHC_Name, "</b>", 
+        "<b>", "<p style='color:Black;'>", " Address:", "</b>", CCBHC$CCHBC_Address, ",",  
+        "<b>", "<p style='color:Black;'>", "Website:","</b>", CCBHC$CCHBC_Website) %>%
+  lapply(htmltools::HTML)
+
+```
+
+```{r}
+
+# FQHC Site Pop UP
+
+FQHC$describe3 <- paste("<b>",  
+         "<p style='color:Black;'>", "<p style='font-size:16px;'>", FQHC$F_Satellite_Name, "</b>", "<br/>", 
+        "<b>", "<p style='color:Black;'>", " Address:", "</b>", FQHC$F_Address, ", ", "Site Type:","</b>", FQHC$F_Site_Type, ",", "Phone Number:","</b>", FQHC$F_Telephone) %>%
+  lapply(htmltools::HTML)
+```
+
+```{r, fig.width=8, fig.height=8}
+
+# 5. Map 1 - DRAFT map not a final version
+
+POAH_Map <- leaflet(POAH_Props) %>%    
+  addProviderTiles(providers$OpenStreetMap.Mapnik) %>% #
+
+addCircles(data=POAH_Props, POAH_Props$Longitude, POAH_Props$Latitude, fillColor="Green", fillOpacity = 1, color="Green", radius = 800, group = "Investment Mapping Tools", highlightOptions = highlightOptions(color = "Black", opacity = .2), 
+                                    popup = ~describe) %>% 
+  
+
+# Here, we are adding a control layer (the box that lets you turn on and off grant rounds)
+  
+addLayersControl(
+    overlayGroups = c("Investment Mapping Tools", "Remedy and OGMs", "Community Driven Strategies", "Enforcement Strategies", "Remedy for Mining Disasters", "Women's Economic Justice", "Round 6"),
+    options = layersControlOptions(collapsed = FALSE))
+
+```
+
+
+```{r}
+# This code creates the final map
+
+POAH_Map <- leaflet(POAH_Props, options = leafletOptions(minZoom = 2, maxZoom = 8)) %>%
+  addProviderTiles(providers$CartoDB.VoyagerNoLabels) %>%
+
+addCircleMarkers(data=POAH_Props, POAH_Props$Longitude, POAH_Props$Latitude, fillColor="#67A62B", fillOpacity = .6, color=NA, group = "POAH Sites", radius = 5,
+                           popup = ~describe4) %>%
+
+               
+addCircleMarkers(data=CCBHC, CCBHC$C_longitude, CCBHC$C_latitude, fillOpacity=.92, fillColor = "#D9CE04", color=NA, group = "CCBHC Sites", radius = 5,
+                           popup = ~describe2) %>% 
+  
+ 
+addCircleMarkers(data=FQHC, FQHC$F_X, FQHC$F_Y, fillOpacity=0.8, fillColor = "#D97925", color= NA, group = "FQHC Sites", radius = 5,
+                           popup = ~describe3) %>%
+
+addControl("POAH Properties & Health Centers", position = "bottomleft") %>%
+  
+addLegend(position = "bottomleft", 
+            colors = c("#67A62B", 
+                       "#D9CE04",
+                      "#D97825"
+                      ),
+          
+          opacity=.78,
+           
+           
+            labels = c("POAH Sites",
+                       "CCBHC Sites",
+                       "FQHC Sites"
+                       ),
+           
+           
+            title = "Legend")  %>%   
+  
+     addLayersControl(position = "bottomleft",
+    overlayGroups = c("POAH Sites", "CCBHC Sites", "FQHC Sites"),
+    options = layersControlOptions(collapsed = FALSE)) %>% 
+  
+   hideGroup("CCBHC Sites") %>%  hideGroup("FQHC Sites") %>% 
+  
+  leaflet.extras::addSearchOSM(options) %>% 
+
+
+  setMaxBounds( lng1 = -120,
+                lat1 = 20,
+                lng2 = -70,
+                lat2 = 60)
+POAH_Map
+
+saveWidget(POAH_Map, file = "POAH_Map.html")
+
+
+```
+
+
+```
